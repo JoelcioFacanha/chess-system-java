@@ -18,6 +18,7 @@ public class ChessMatch {
 	private List<Piece> piecesOnTheBoard = new ArrayList<>();
 	private List<Piece> capturedPieces = new ArrayList<>();
 	private boolean check;
+	private boolean checkMate;
 
 	public ChessMatch() {
 		board = new Board(8, 8);
@@ -36,6 +37,10 @@ public class ChessMatch {
 
 	public boolean getCheck() {
 		return check;
+	}
+
+	public boolean getCheckMate() {
+		return checkMate;
 	}
 
 	public ChessPiece[][] getPieces() {
@@ -67,7 +72,12 @@ public class ChessMatch {
 
 		check = (testCheck(opponent(currentPlayer))) ? true : false;
 
-		nextTurn();
+		if (testCheckMate(opponent(currentPlayer))) {
+			checkMate = true;
+		} else {
+			nextTurn();
+		}
+
 		return (ChessPiece) capturedPiece;
 	}
 
@@ -146,12 +156,12 @@ public class ChessMatch {
 	}
 
 	private boolean testCheck(Color color) {
-		
+
 		Position kingPosition = king(color).getChessPosition().toPosition();
-		
+
 		List<Piece> opponentPieces = piecesOnTheBoard.stream()
 				.filter(x -> ((ChessPiece) x).getColor() == opponent(color)).collect(Collectors.toList());
-		
+
 		for (Piece p : opponentPieces) {
 			boolean[][] mat = p.possibleMoves();
 			if (mat[kingPosition.getRow()][kingPosition.getColumn()]) {
@@ -159,6 +169,44 @@ public class ChessMatch {
 			}
 		}
 		return false;
+	}
+
+	private boolean testCheckMate(Color color) {
+
+		if (!testCheck(color)) {
+			return false;
+		}
+
+		List<Piece> list = piecesOnTheBoard.stream().filter(x -> ((ChessPiece) x).getColor() == color)
+				.collect(Collectors.toList());
+
+		for (Piece p : list) {
+
+			boolean[][] mat = p.possibleMoves();
+
+			for (int i = 0; i < board.getRows(); i++) {
+				for (int j = 0; j < board.getColumns(); j++) {
+
+					if (mat[i][j]) {
+
+						Position source = ((ChessPiece) p).getChessPosition().toPosition();
+						Position target = new Position(i, j);
+
+						Piece capturedPiece = makeMove(source, target);
+
+						boolean testCheck = testCheck(color);
+
+						undoMove(source, target, capturedPiece);
+
+						if (!testCheck) {
+							return false;
+						}
+					}
+				}
+			}
+		}
+
+		return true;
 	}
 
 	private Color opponent(Color color) {
